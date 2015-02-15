@@ -1,0 +1,11 @@
+.aborted-timer {
+    color: #ff0000;
+}
+
+.break-timer, .completed-timer {
+    color: #00ff00;
+}
+
+.in-progress-timer {
+    color: #ffa500;
+}

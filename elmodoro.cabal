@@ -17,6 +17,7 @@ cabal-version:       >=1.10
 
 executable elmodoro
   main-is:             Main.hs
+  hs-source-dirs:      backend
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8

@@ -19,6 +19,12 @@ type alias ElmodoroModel =
 
 type alias Action = ElmodoroModel -> ElmodoroModel
 
+workTime : Time
+workTime = 0.2 * minute
+
+breakTime : Time
+breakTime = 0.1 * minute
+
 view       : Time -> ElmodoroModel -> Html
 view time model =
   div
@@ -43,8 +49,26 @@ timerView time model =
 displayTimeRemaining : Time -> ElmodoroModel -> Html
 displayTimeRemaining time model =
   case model.status of
-    InProgress -> text (toString (inMinutes ((model.startTime + (25 * minute)) - time)))
-    _ -> text (toString (inMinutes ((model.startTime + (25 * minute)) - model.endTime)))
+    InProgress ->
+      span
+        [ class "in-progress-timer" ]
+        [ text (toString (inMinutes ((model.startTime + workTime) - time))) ]
+    Break ->
+      span
+        [ class "break-timer" ]
+        [ text (toString (inMinutes ((model.startTime + workTime + breakTime) - time))) ]
+    Completed ->
+      span
+        [ class "completed-timer" ]
+        [ text (toString 0) ]
+    Aborted    ->
+      span
+        [ class "aborted-timer" ]
+        [ text (toString (inMinutes ((model.startTime + workTime) - model.endTime))) ]
+    Idle ->
+      span
+        [ class "idle-timer" ]
+        [ text (toString (inMinutes workTime)) ]
 
 tagEntryView : List String -> Html
 tagEntryView tags =
@@ -76,12 +100,21 @@ updates = channel identity
 update : Action -> ElmodoroModel -> ElmodoroModel
 update action model = action model
 
+tick : Time -> Action
+tick time model =
+  if | model.status == Idle               -> model
+     | time >= model.startTime + workTime + breakTime -> { model | status <- Completed }
+     | time >= model.startTime + workTime -> { model | endTime <- time, status <- Break }
+     | otherwise                          -> model
+
 main : Signal Html
 main = view <~ (every second)
              ~ model
 
 model : Signal ElmodoroModel
-model = foldp update initialModel (subscribe updates)
+model = foldp update initialModel
+  (merge (subscribe updates)
+         (tick <~ every second))
 
 initialModel : ElmodoroModel
 initialModel =
