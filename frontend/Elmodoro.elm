@@ -20,10 +20,10 @@ type alias ElmodoroModel =
 type alias Action = ElmodoroModel -> ElmodoroModel
 
 workTime : Time
-workTime = 0.2 * minute
+workTime = 25 * minute
 
 breakTime : Time
-breakTime = 0.1 * minute
+breakTime = 5 * minute
 
 view       : Time -> ElmodoroModel -> Html
 view time model =
@@ -108,10 +108,10 @@ update action model = action model
 
 tick : Time -> Action
 tick time model =
-  if | model.status == Idle || model.status == Aborted     -> model
-     | time >= model.startTime + workTime + breakTime -> { model | status <- Completed }
-     | time >= model.startTime + workTime -> { model | endTime <- time, status <- Break }
-     | otherwise                          -> model
+  if | model.status == Idle || model.status == Aborted || model.status == Completed  -> model
+     | time >= model.startTime + workTime + breakTime                                -> { model | endTime <- time, status <- Completed }
+     | time >= model.startTime + workTime                                            -> { model | endTime <- time, status <- Break }
+     | otherwise                                                                     -> model
 
 main : Signal Html
 main = view <~ (every second)
