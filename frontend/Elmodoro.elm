@@ -94,11 +94,18 @@ controlView time status =
     , button [ onClick (send updates (endTimer time))  ] [ text "Stop"  ]
     ]
 
-startTimer      : Time -> Action
-startTimer time = (\elmodoro -> { elmodoro | startTime <- time, status <- InProgress })
+startTimer               : Time -> Action
+startTimer time elmodoro =
+  case elmodoro.status of
+    Idle -> { elmodoro | startTime <- time, status <- InProgress }
+    _    -> elmodoro
 
-endTimer      : Time -> Action
-endTimer time = (\elmodoro -> { elmodoro | endTime <- time, status <- Aborted })
+endTimer               : Time -> Action
+endTimer time elmodoro = 
+  case elmodoro.status of
+    InProgress -> { elmodoro | endTime <- time, status <- Aborted }
+    Break      -> { elmodoro | endTime <- time, status <- Completed }
+    _          -> elmodoro
 
 updates : Channel Action
 updates = channel identity
