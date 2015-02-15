@@ -46,29 +46,35 @@ timerView time model =
 
     [ displayTimeRemaining time model ]
 
+formatTime : Time -> String
+formatTime time = String.join ":"
+  [ (toString (floor (inMinutes time)))
+  , (toString ((round (inSeconds time)) % 60))
+  ]
+
 displayTimeRemaining : Time -> ElmodoroModel -> Html
 displayTimeRemaining time model =
   case model.status of
     InProgress ->
       span
         [ class "in-progress-timer" ]
-        [ text (toString (inMinutes ((model.startTime + workTime) - time))) ]
+        [ text (formatTime ((model.startTime + workTime) - time)) ]
     Break ->
       span
         [ class "break-timer" ]
-        [ text (toString (inMinutes ((model.startTime + workTime + breakTime) - time))) ]
+        [ text (formatTime ((model.startTime + workTime + breakTime) - time)) ]
     Completed ->
       span
         [ class "completed-timer" ]
-        [ text (toString 0) ]
+        [ text (formatTime 0) ]
     Aborted    ->
       span
         [ class "aborted-timer" ]
-        [ text (toString (inMinutes ((model.startTime + workTime) - model.endTime))) ]
+        [ text (formatTime ((model.startTime + workTime) - model.endTime)) ]
     Idle ->
       span
         [ class "idle-timer" ]
-        [ text (toString (inMinutes workTime)) ]
+        [ text (formatTime workTime) ]
 
 tagEntryView : List String -> Html
 tagEntryView tags =
@@ -102,7 +108,7 @@ update action model = action model
 
 tick : Time -> Action
 tick time model =
-  if | model.status == Idle               -> model
+  if | model.status == Idle || model.status == Aborted     -> model
      | time >= model.startTime + workTime + breakTime -> { model | status <- Completed }
      | time >= model.startTime + workTime -> { model | endTime <- time, status <- Break }
      | otherwise                          -> model
