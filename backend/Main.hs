@@ -20,20 +20,30 @@ import Happstack.Server
 
 import System.Environment
 
-instance ToJSON Elmodoro where
-  toJSON Elmodoro { startTime   = start
-                  , endTime     = end
-                  , workLength  = worklen
-                  , breakLength = breaklen
-                  , tags        = tags
-                  , status      = status
-                  } = object [ "starttime"   .= (floor start :: Int)
-                             , "endtime"     .= (floor <$> end :: Maybe Int)
-                             , "worklength"  .= ((floor worklen) :: Int)
-                             , "breaklength" .= ((floor breaklen) :: Int)
-                             , "tags"        .= tags
-                             , "status"      .= (Prelude.map toLower . show $ status)
-                             ]
+data IdentifiedElmodoro = IdentifiedElmodoro
+  { elmodoroID    :: Int
+  , elmodoroModel :: Elmodoro
+  }
+
+instance ToJSON IdentifiedElmodoro where
+  toJSON IdentifiedElmodoro
+    { elmodoroID  = id
+    , elmodoroModel = Elmodoro
+      { startTime   = start
+      , endTime     = end
+      , workLength  = worklen
+      , breakLength = breaklen
+      , tags        = tags
+      , status      = status
+      }
+    } = object [ "id"          .= id
+               , "starttime"   .= (floor . (*1000) $ start :: Int)
+               , "endtime"     .= (floor . (*1000) <$> end :: Maybe Int)
+               , "worklength"  .= ((floor worklen) :: Int)
+               , "breaklength" .= ((floor breaklen) :: Int)
+               , "tags"        .= tags
+               , "status"      .= (Prelude.map toLower . show $ status)
+               ]
 
 data ElmodoroRequest = ElmodoroRequest
   { reqWorkLength  :: Int
@@ -67,7 +77,7 @@ createHandler = do
             , tags        = reqTags (elmodoro)
             , status      = InProgress
             }
-          ok $ toResponseBS (C.pack "application/json") (encode newelmodoro)
+          ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro 1 newelmodoro)
         _ -> badRequest $ toResponse ("badRequest" :: String)
     else internalServerError $ toResponse ("500" :: String)
 
