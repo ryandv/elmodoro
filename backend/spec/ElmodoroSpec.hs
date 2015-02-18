@@ -31,6 +31,14 @@ spec = do
         endElmodoro 1500 exampleElmodoro `shouldBe` exampleElmodoro
           { status  = Break }
 
+      it "completes Elmodoros on Break before the work + break time has elapsed" $
+        let elmodoroOnBreak = exampleElmodoro { status = Break } in
+
+          endElmodoro 1600 elmodoroOnBreak `shouldBe` exampleElmodoro
+            { endTime = Just $ fromInteger 1600
+            , status  = Completed
+            }
+
       it "completes Elmodoros when the work + break time has elapsed" $
         endElmodoro 1800 exampleElmodoro `shouldBe` exampleElmodoro
           { endTime     = Just $ fromInteger 1800

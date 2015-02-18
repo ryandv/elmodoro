@@ -39,11 +39,14 @@ completeElmodoro curtime elmodoro =
 endElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 endElmodoro curtime elmodoro@Elmodoro { startTime   = start
                                       , workLength  = worklen
-                                      , breakLength = breaklen}
+                                      , breakLength = breaklen
+                                      , status      = status
+                                      }
 
-  | timeLeft     <= 0 = completeElmodoro curtime elmodoro
-  | workTimeLeft <= 0 = breakElmodoro curtime elmodoro
-  | workTimeLeft >  0 = abortElmodoro curtime elmodoro
+  | timeLeft     <= 0                    = completeElmodoro curtime elmodoro
+  | workTimeLeft <= 0 && status == Break = completeElmodoro curtime elmodoro
+  | workTimeLeft <= 0                    = breakElmodoro curtime elmodoro
+  | workTimeLeft >  0                    = abortElmodoro curtime elmodoro
   | otherwise = elmodoro where
 
   expectedWorkEndTime :: UTCTime
