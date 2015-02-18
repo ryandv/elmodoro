@@ -43,7 +43,7 @@ spec = do
 
             completeElmodoro 500 elmodoro `shouldBe` elmodoro
 
-      {--it "can abort an Elmodoro" $
+      it "can abort an Elmodoro" $
         let elmodoro = Elmodoro { elmodoroID  = 1
           , startTime   = 0
           , endTime     = Nothing
@@ -51,4 +51,6 @@ spec = do
           , breakLength = fromInteger 300
           , tags        = []
           , status      = InProgress
-          } in--}
+          } in
+
+            abortElmodoro 10 elmodoro `shouldBe` elmodoro { endTime = Just $ 10, status = Aborted }

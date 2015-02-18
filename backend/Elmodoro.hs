@@ -2,6 +2,7 @@ module Elmodoro
   ( Elmodoro(..)
   , ElmodoroStatus(..)
 
+  , abortElmodoro
   , completeElmodoro
   ) where
 
@@ -19,6 +20,9 @@ data Elmodoro = Elmodoro
   , tags        :: [String]
   , status      :: ElmodoroStatus
   } deriving(Eq, Show)
+
+abortElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
+abortElmodoro curtime elmodoro = elmodoro { endTime = Just $ curtime, status = Aborted }
 
 completeElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 completeElmodoro curtime elmodoro@Elmodoro { startTime  = start
