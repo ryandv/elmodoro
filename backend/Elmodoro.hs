@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveDataTypeable #-}
 module Elmodoro
   ( Elmodoro(..)
   , ElmodoroStatus(..)
@@ -7,6 +8,7 @@ module Elmodoro
 
 import Data.Time.Clock
 import Data.Time.Clock.POSIX
+import Data.Typeable
 
 data ElmodoroStatus = Idle | InProgress | Break | Completed | Aborted deriving(Eq, Show)
 
@@ -17,7 +19,7 @@ data Elmodoro = Elmodoro
   , breakLength :: NominalDiffTime
   , tags        :: [String]
   , status      :: ElmodoroStatus
-  } deriving(Eq, Show)
+  } deriving(Eq, Show, Typeable)
 
 abortElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 abortElmodoro curtime elmodoro =

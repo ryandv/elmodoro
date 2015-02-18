@@ -59,18 +59,21 @@ instance FromJSON ElmodoroRequest where
       o .: "breaklength" <*>
       o .: "tags"
 
-createHandler :: AcidState ElmodoroDB -> ServerPart Response
+createHandler    :: AcidState ElmodoroDB -> ServerPart Response
 createHandler db = do
   req <- askRq
   rqbody <- takeRequestBody req
 
   if (isJust rqbody)
-    -- don't do this
     then do
+
       let reqelmodoro = decode (unBody . fromJust $ rqbody)
+
       case reqelmodoro of
         Just (elmodoro) -> do
+
           curtime <- liftIO $ getPOSIXTime
+
           let newelmodoro = Elmodoro { startTime = curtime
             , endTime     = Nothing
             , workLength  = fromInteger . toInteger . reqWorkLength $ elmodoro
@@ -82,12 +85,20 @@ createHandler db = do
           newid <- update' db (CreateElmodoro newelmodoro)
 
           ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro newid newelmodoro)
+
         _ -> badRequest $ toResponse ("badRequest" :: String)
+
     else internalServerError $ toResponse ("500" :: String)
 
+updateHandler       :: AcidState ElmodoroDB -> Int -> ServerPart Response
+updateHandler db id = do
+  curtime <- liftIO $ getPOSIXTime
 
-updateHandler :: Int -> ServerPart Response
-updateHandler = undefined
+  updatedElmodoro <- update' db (UpdateElmodoro id curtime)
+
+  case updatedElmodoro of
+    (Just elmodoro) -> ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro id elmodoro)
+    Nothing         -> notFound $ toResponse ("Elmodoro not found" :: String)
 
 main :: IO ()
 main = do
@@ -99,6 +110,6 @@ main = do
       msum [ do nullDir
                 method POST
                 createHandler db
-           , path updateHandler
+           , path $ updateHandler db
            ]
-          ]
+         ]

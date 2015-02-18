@@ -31,8 +31,12 @@ createElmodoro elmodoro = do
         put . ElmodoroDB $ singleton 1 elmodoro
         return 1
 
-updateElmodoro                     :: Key -> POSIXTime -> Elmodoro -> Update ElmodoroDB ()
-updateElmodoro id curtime elmodoro = modify go where
+updateElmodoro            :: Key -> POSIXTime -> Update ElmodoroDB (Maybe Elmodoro)
+updateElmodoro id curtime = do
+  modify $ go
+  db <- get
+  return $ Data.IntMap.Lazy.lookup id (allElmodoros db) where
+
   go (ElmodoroDB db) = ElmodoroDB $ adjust (transitionElmodoro curtime) id db
 
 $(makeAcidic ''ElmodoroDB ['createElmodoro, 'updateElmodoro])
