@@ -12,36 +12,33 @@ import Test.Hspec
 main :: IO ()
 main = hspec spec
 
+exampleElmodoro :: Elmodoro
+exampleElmodoro = Elmodoro
+  { elmodoroID  = 1
+  , startTime   = 0
+  , endTime     = Nothing
+  , workLength  = fromInteger 1500
+  , breakLength = fromInteger 300
+  , tags        = []
+  , status      = InProgress
+  }
+
 spec :: Spec
 spec = do
   describe "Elmodoro" $ do
     context "endElmodoro" $ do
-      it "completes Elmodoros when the work + break time has been reached" $
-        let elmodoro = Elmodoro { elmodoroID  = 1
-          , startTime   = 0
-          , endTime     = Nothing
-          , workLength  = fromInteger 1500
-          , breakLength = fromInteger 300
-          , tags        = []
-          , status      = InProgress
-          } in
+      it "transitions Elmodoros to Break when the work time has elapsed" $
+        endElmodoro 1500 exampleElmodoro `shouldBe` exampleElmodoro
+          { status  = Break }
 
-            endElmodoro 1800 elmodoro `shouldBe` elmodoro
-              { endTime     = Just $ fromInteger 1800
-              , status      = Completed
-              }
+      it "completes Elmodoros when the work + break time has elapsed" $
+        endElmodoro 1800 exampleElmodoro `shouldBe` exampleElmodoro
+          { endTime     = Just $ fromInteger 1800
+          , status      = Completed
+          }
 
       it "aborts Elmodoros when the end time has not been reached" $
-        let elmodoro = Elmodoro { elmodoroID  = 1
-          , startTime   = 0
-          , endTime     = Nothing
-          , workLength  = fromInteger 1500
-          , breakLength = fromInteger 300
-          , tags        = []
-          , status      = InProgress
-          } in
-
-            endElmodoro 500 elmodoro `shouldBe` elmodoro
-              { endTime = Just $ 500
-              , status  = Aborted
-              }
+        endElmodoro 500 exampleElmodoro `shouldBe` exampleElmodoro
+          { endTime = Just $ 500
+          , status  = Aborted
+          }

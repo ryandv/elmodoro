@@ -26,6 +26,10 @@ abortElmodoro curtime elmodoro =
            , status = Aborted
            }
 
+breakElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
+breakElmodoro curtime elmodoro =
+  elmodoro { status = Break }
+
 completeElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 completeElmodoro curtime elmodoro =
   elmodoro { status = Completed
@@ -33,12 +37,23 @@ completeElmodoro curtime elmodoro =
            }
 
 endElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
-endElmodoro curtime elmodoro@Elmodoro { startTime  = start
-                                      , workLength = worklen}
+endElmodoro curtime elmodoro@Elmodoro { startTime   = start
+                                      , workLength  = worklen
+                                      , breakLength = breaklen}
 
-  | (diffUTCTime expectedEndTime (posixSecondsToUTCTime curtime)) <= 0 = completeElmodoro curtime elmodoro
-  | (diffUTCTime expectedEndTime (posixSecondsToUTCTime curtime)) >  0 = abortElmodoro curtime elmodoro
+  | timeLeft     <= 0 = completeElmodoro curtime elmodoro
+  | workTimeLeft <= 0 = breakElmodoro curtime elmodoro
+  | workTimeLeft >  0 = abortElmodoro curtime elmodoro
   | otherwise = elmodoro where
 
+  expectedWorkEndTime :: UTCTime
+  expectedWorkEndTime = addUTCTime worklen (posixSecondsToUTCTime start)
+
+  workTimeLeft :: NominalDiffTime
+  workTimeLeft = diffUTCTime expectedWorkEndTime (posixSecondsToUTCTime curtime)
+
   expectedEndTime :: UTCTime
-  expectedEndTime = (addUTCTime worklen (posixSecondsToUTCTime start))
+  expectedEndTime = addUTCTime breaklen expectedWorkEndTime
+
+  timeLeft :: NominalDiffTime
+  timeLeft = diffUTCTime expectedEndTime (posixSecondsToUTCTime curtime)
