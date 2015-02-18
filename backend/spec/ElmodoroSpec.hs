@@ -14,8 +14,7 @@ main = hspec spec
 
 exampleElmodoro :: Elmodoro
 exampleElmodoro = Elmodoro
-  { elmodoroID  = 1
-  , startTime   = 0
+  { startTime   = 0
   , endTime     = Nothing
   , workLength  = fromInteger 1500
   , breakLength = fromInteger 300

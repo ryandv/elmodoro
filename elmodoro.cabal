@@ -21,6 +21,8 @@ executable elmodoro
   -- other-modules:       
   -- other-extensions:    
   build-depends:       base >=4.7 && <4.8,
+                       acid-state >= 0.12.3,
+                       containers >= 0.5.5.1,
                        hspec >= 2.1.4,
                        time >= 1.4.2
   -- hs-source-dirs:      

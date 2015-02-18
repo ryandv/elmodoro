@@ -11,8 +11,7 @@ import Data.Time.Clock.POSIX
 data ElmodoroStatus = Idle | InProgress | Break | Completed | Aborted deriving(Eq, Show)
 
 data Elmodoro = Elmodoro
-  { elmodoroID  :: Int
-  , startTime   :: POSIXTime
+  { startTime   :: POSIXTime
   , endTime     :: Maybe POSIXTime
   , workLength  :: NominalDiffTime
   , breakLength :: NominalDiffTime
