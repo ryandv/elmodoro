@@ -5,6 +5,7 @@ import Control.Monad.Trans.Class
 import Control.Monad.IO.Class
 
 import Data.Acid
+import Data.Acid.Advanced
 import Data.Aeson
 import qualified Data.ByteString.Char8 as C
 import Data.Char
@@ -58,8 +59,8 @@ instance FromJSON ElmodoroRequest where
       o .: "breaklength" <*>
       o .: "tags"
 
-createHandler :: ServerPart Response
-createHandler = do
+createHandler :: AcidState ElmodoroDB -> ServerPart Response
+createHandler db = do
   req <- askRq
   rqbody <- takeRequestBody req
 
@@ -77,7 +78,10 @@ createHandler = do
             , tags        = reqTags (elmodoro)
             , status      = InProgress
             }
-          ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro 1 newelmodoro)
+
+          newid <- update' db (CreateElmodoro newelmodoro)
+
+          ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro newid newelmodoro)
         _ -> badRequest $ toResponse ("badRequest" :: String)
     else internalServerError $ toResponse ("500" :: String)
 
@@ -94,7 +98,7 @@ main = do
     msum [ dir "elmodoro" $
       msum [ do nullDir
                 method POST
-                createHandler
+                createHandler db
            , path updateHandler
            ]
           ]
