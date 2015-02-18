@@ -25,27 +25,27 @@ exampleElmodoro = Elmodoro
 spec :: Spec
 spec = do
   describe "Elmodoro" $ do
-    context "endElmodoro" $ do
+    context "transitionElmodoro" $ do
       it "transitions Elmodoros to Break when the work time has elapsed" $
-        endElmodoro 1500 exampleElmodoro `shouldBe` exampleElmodoro
+        transitionElmodoro 1500 exampleElmodoro `shouldBe` exampleElmodoro
           { status  = Break }
 
       it "completes Elmodoros on Break before the work + break time has elapsed" $
         let elmodoroOnBreak = exampleElmodoro { status = Break } in
 
-          endElmodoro 1600 elmodoroOnBreak `shouldBe` exampleElmodoro
+          transitionElmodoro 1600 elmodoroOnBreak `shouldBe` exampleElmodoro
             { endTime = Just $ fromInteger 1600
             , status  = Completed
             }
 
       it "completes Elmodoros when the work + break time has elapsed" $
-        endElmodoro 1800 exampleElmodoro `shouldBe` exampleElmodoro
+        transitionElmodoro 1800 exampleElmodoro `shouldBe` exampleElmodoro
           { endTime     = Just $ fromInteger 1800
           , status      = Completed
           }
 
       it "aborts Elmodoros when the end time has not been reached" $
-        endElmodoro 500 exampleElmodoro `shouldBe` exampleElmodoro
+        transitionElmodoro 500 exampleElmodoro `shouldBe` exampleElmodoro
           { endTime = Just $ 500
           , status  = Aborted
           }

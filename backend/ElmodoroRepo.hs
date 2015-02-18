@@ -21,4 +21,4 @@ createElmodoro elmodoro = modify go where
 
 updateElmodoro                     :: Key -> POSIXTime -> Elmodoro -> Update ElmodoroDB ()
 updateElmodoro id curtime elmodoro = modify go where
-  go (ElmodoroDB db) = ElmodoroDB $ adjust (endElmodoro curtime) id db
+  go (ElmodoroDB db) = ElmodoroDB $ adjust (transitionElmodoro curtime) id db

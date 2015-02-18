@@ -2,7 +2,7 @@ module Elmodoro
   ( Elmodoro(..)
   , ElmodoroStatus(..)
 
-  , endElmodoro
+  , transitionElmodoro
   ) where
 
 import Data.Time.Clock
@@ -35,12 +35,12 @@ completeElmodoro curtime elmodoro =
            , endTime = Just $ curtime
            }
 
-endElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
-endElmodoro curtime elmodoro@Elmodoro { startTime   = start
-                                      , workLength  = worklen
-                                      , breakLength = breaklen
-                                      , status      = status
-                                      }
+transitionElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
+transitionElmodoro curtime elmodoro@Elmodoro { startTime   = start
+                                             , workLength  = worklen
+                                             , breakLength = breaklen
+                                             , status      = status
+                                             }
 
   | timeLeft     <= 0                    = completeElmodoro curtime elmodoro
   | workTimeLeft <= 0 && status == Break = completeElmodoro curtime elmodoro
