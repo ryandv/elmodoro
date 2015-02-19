@@ -30,8 +30,8 @@ instance ToJSON IdentifiedElmodoro where
   toJSON IdentifiedElmodoro
     { elmodoroID  = id
     , elmodoroModel = Elmodoro
-      { startTime   = start
-      , endTime     = end
+      { workStartTime   = start
+      , workEndTime     = end
       , workLength  = worklen
       , breakLength = breaklen
       , tags        = tags
@@ -74,12 +74,14 @@ createHandler db = do
 
           curtime <- liftIO $ getPOSIXTime
 
-          let newelmodoro = Elmodoro { startTime = curtime
-            , endTime     = Nothing
-            , workLength  = fromInteger . toInteger . reqWorkLength $ elmodoro
-            , breakLength = fromInteger . toInteger . reqBreakLength $ elmodoro
-            , tags        = reqTags (elmodoro)
-            , status      = InProgress
+          let newelmodoro = Elmodoro { workStartTime = curtime
+            , workEndTime        = Nothing
+            , breakStartTime     = Nothing
+            , breakEndTime       = Nothing
+            , workLength         = fromInteger . toInteger . reqWorkLength $ elmodoro
+            , breakLength        = fromInteger . toInteger . reqBreakLength $ elmodoro
+            , tags               = reqTags (elmodoro)
+            , status             = InProgress
             }
 
           newid <- update' db (CreateElmodoro newelmodoro)

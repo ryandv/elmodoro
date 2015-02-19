@@ -10,44 +10,54 @@ import Data.Time.Clock
 import Data.Time.Clock.POSIX
 import Data.Typeable
 
-data ElmodoroStatus = Idle | InProgress | Break | Completed | Aborted deriving(Eq, Show)
+data ElmodoroStatus = Idle | InProgress | Break | BreakPending | Completed | Aborted deriving(Eq, Show)
 
 data Elmodoro = Elmodoro
-  { startTime   :: POSIXTime
-  , endTime     :: Maybe POSIXTime
-  , workLength  :: NominalDiffTime
-  , breakLength :: NominalDiffTime
-  , tags        :: [String]
-  , status      :: ElmodoroStatus
+  { workStartTime    :: POSIXTime
+  , workEndTime      :: Maybe POSIXTime
+  , breakStartTime   :: Maybe POSIXTime
+  , breakEndTime     :: Maybe POSIXTime
+  , workLength       :: NominalDiffTime
+  , breakLength      :: NominalDiffTime
+  , tags             :: [String]
+  , status           :: ElmodoroStatus
   } deriving(Eq, Show, Typeable)
 
 abortElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 abortElmodoro curtime elmodoro =
-  elmodoro { endTime = Just $ curtime
+  elmodoro { workEndTime = Just $ curtime
            , status = Aborted
            }
 
-breakElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
-breakElmodoro curtime elmodoro =
-  elmodoro { status = Break }
+waitForBreak :: POSIXTime -> Elmodoro -> Elmodoro
+waitForBreak curtime elmodoro =
+  elmodoro { status      = BreakPending
+           , workEndTime = Just curtime
+           }
+
+startBreak :: POSIXTime -> Elmodoro -> Elmodoro
+startBreak curtime elmodoro =
+  elmodoro { status         = Break
+           , breakStartTime = Just curtime
+           }
 
 completeElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 completeElmodoro curtime elmodoro =
-  elmodoro { status = Completed
-           , endTime = Just $ curtime
+  elmodoro { status       = Completed
+           , breakEndTime = Just $ curtime
            }
 
 transitionElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
-transitionElmodoro curtime elmodoro@Elmodoro { startTime   = start
-                                             , workLength  = worklen
-                                             , breakLength = breaklen
-                                             , status      = status
+transitionElmodoro curtime elmodoro@Elmodoro { workStartTime   = start
+                                             , workLength      = worklen
+                                             , breakLength     = breaklen
+                                             , status          = status
                                              }
 
   | status == Aborted                    = elmodoro
-  | timeLeft     <= 0                    = completeElmodoro curtime elmodoro
-  | workTimeLeft <= 0 && status == Break = completeElmodoro curtime elmodoro
-  | workTimeLeft <= 0                    = breakElmodoro curtime elmodoro
+  | status == BreakPending               = startBreak curtime elmodoro
+  | status == Break                      = completeElmodoro curtime elmodoro
+  | workTimeLeft <= 0                    = waitForBreak curtime elmodoro
   | workTimeLeft >  0                    = abortElmodoro curtime elmodoro
   | otherwise = elmodoro where
 

@@ -14,42 +14,63 @@ main = hspec spec
 
 exampleElmodoro :: Elmodoro
 exampleElmodoro = Elmodoro
-  { startTime   = 0
-  , endTime     = Nothing
-  , workLength  = fromInteger 1500
-  , breakLength = fromInteger 300
-  , tags        = []
-  , status      = InProgress
+  { workStartTime   = 0
+  , workEndTime     = Nothing
+  , breakStartTime  = Nothing
+  , breakEndTime    = Nothing
+  , workLength      = fromInteger 1500
+  , breakLength     = fromInteger 300
+  , tags            = []
+  , status          = InProgress
   }
 
 spec :: Spec
 spec = do
   describe "Elmodoro" $ do
     context "transitionElmodoro" $ do
-      it "transitions Elmodoros to Break when the work time has elapsed" $
+      it "transitions Elmodoros to BreakPending when the work time has elapsed" $
         transitionElmodoro 1500 exampleElmodoro `shouldBe` exampleElmodoro
-          { status  = Break }
+          { status      = BreakPending
+          , workEndTime = Just 1500
+          }
+
+      it "transitions Elmodoros from BreakPending to Break" $
+        let pendingBreak = exampleElmodoro { status      = BreakPending
+                                           , workEndTime = Just 1500
+                                           } in
+
+          transitionElmodoro 1501 pendingBreak `shouldBe` pendingBreak
+            { status = Break
+            , breakStartTime = Just 1501
+            }
 
       it "completes Elmodoros on Break before the work + break time has elapsed" $
-        let elmodoroOnBreak = exampleElmodoro { status = Break } in
+        let elmodoroOnBreak = exampleElmodoro { status         = Break
+                                              , workEndTime    = Just 1500
+                                              , breakStartTime = Just 1501
+                                              } in
 
-          transitionElmodoro 1600 elmodoroOnBreak `shouldBe` exampleElmodoro
-            { endTime = Just $ fromInteger 1600
-            , status  = Completed
+          transitionElmodoro 1600 elmodoroOnBreak `shouldBe` elmodoroOnBreak
+            { breakEndTime = Just 1600
+            , status       = Completed
             }
 
       it "completes Elmodoros when the work + break time has elapsed" $
-        transitionElmodoro 1800 exampleElmodoro `shouldBe` exampleElmodoro
-          { endTime     = Just $ fromInteger 1800
-          , status      = Completed
+        let doneWorking = exampleElmodoro { status = Break
+                                          , workEndTime = Just 1500
+                                          , breakStartTime = Just 1501
+                                          } in
+        transitionElmodoro 1801 doneWorking `shouldBe` doneWorking
+          { status = Completed
+          , breakEndTime = Just 1801
           }
 
       it "aborts Elmodoros when the end time has not been reached" $
         transitionElmodoro 500 exampleElmodoro `shouldBe` exampleElmodoro
-          { endTime = Just $ 500
-          , status  = Aborted
+          { workEndTime = Just 500
+          , status      = Aborted
           }
 
       it "does nothing to an already aborted Elmodoro" $
-        let abortedElmodoro = exampleElmodoro { endTime = Just 500, status = Aborted } in
+        let abortedElmodoro = exampleElmodoro { workEndTime = Just 500, status = Aborted } in
           transitionElmodoro 600 abortedElmodoro `shouldBe` abortedElmodoro
