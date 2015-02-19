@@ -29,8 +29,12 @@ view time elmreq model =
       [ id "elmodoro-app" ]
 
       [ timerView time model
-      , tagEntryView
-      , controlView time elmreq model
+      , div
+          [ id "options" ]
+
+          [ tagEntryView
+          , controlView time elmreq model
+          ]
       ]
     ]
 
@@ -77,12 +81,14 @@ displayTimeRemaining time model =
 
 tagEntryView : Html
 tagEntryView =
-  input
-    [ id "elmodoro-tags"
-    , on "blur" targetValue (send tagsChan)
+  div
+    [ id "elmodoro-tags" ]
+    [ input
+      [ class "tag-field"
+      , placeholder "Enter a list of tags for this Elmodoro"
+      , on "blur" targetValue (send tagsChan)
+      ] []
     ]
-
-    []
 
 updateMessage : ElmodoroModel -> Message
 updateMessage elmodoro = (send requestChan (Http.request "put" (String.append "http://localhost:8080/elmodoro/" (toString elmodoro.elmodoroID)) "" []))
@@ -102,8 +108,12 @@ controlView time elmreq elmodoro =
   div
     [ id "elmodoro-controls" ]
 
-    [ button [ onClick <| chooseStartButtonMessage time elmreq elmodoro ] [ text "Start" ]
-    , button [ onClick <| updateMessage elmodoro ] [ text "Stop" ]
+    [ button [ class "button-green"
+             , onClick <| chooseStartButtonMessage time elmreq elmodoro 
+             ] [ text "Start" ]
+    , button [ class "button-red"
+             , onClick <| updateMessage elmodoro 
+             ] [ text "Stop" ]
     ]
 
 requestChan : Channel (Http.Request String)
