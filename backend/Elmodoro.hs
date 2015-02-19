@@ -44,6 +44,7 @@ transitionElmodoro curtime elmodoro@Elmodoro { startTime   = start
                                              , status      = status
                                              }
 
+  | status == Aborted                    = elmodoro
   | timeLeft     <= 0                    = completeElmodoro curtime elmodoro
   | workTimeLeft <= 0 && status == Break = completeElmodoro curtime elmodoro
   | workTimeLeft <= 0                    = breakElmodoro curtime elmodoro

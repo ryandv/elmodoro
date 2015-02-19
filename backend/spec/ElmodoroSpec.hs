@@ -49,3 +49,7 @@ spec = do
           { endTime = Just $ 500
           , status  = Aborted
           }
+
+      it "does nothing to an already aborted Elmodoro" $
+        let abortedElmodoro = exampleElmodoro { endTime = Just 500, status = Aborted } in
+          transitionElmodoro 600 abortedElmodoro `shouldBe` abortedElmodoro
