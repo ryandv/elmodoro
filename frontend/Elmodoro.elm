@@ -4,6 +4,16 @@ import Html(..)
 import Html.Attributes(..)
 import Html.Events(..)
 
+import Http
+
+import Json.Decode as D
+import Json.Decode((:=))
+import Json.Encode as E
+
+import List as L
+
+import Maybe as M
+
 import Signal(..)
 import String
 import Time(..)
@@ -11,19 +21,70 @@ import Time(..)
 type ElmodoroStatus = Idle | InProgress | Break | Completed | Aborted
 
 type alias ElmodoroModel =
-  { startTime : Time
-  , endTime   : Time
-  , tags      : List String
-  , status    : ElmodoroStatus
+  { elmodoroID  : Int
+  , startTime   : Time
+  , endTime     : Maybe Time
+  , workLength  : Time
+  , breakLength : Time
+  , tags        : List String
+  , status      : ElmodoroStatus
   }
 
-type alias Action = ElmodoroModel -> ElmodoroModel
+statusStringToElmodoroStatus     : String -> ElmodoroStatus
+statusStringToElmodoroStatus str =
+  case str of
+    "idle" -> Idle
+    "inprogress" -> InProgress
+    "break" -> Break
+    "completed" -> Completed
+    "aborted" -> Aborted
 
-workTime : Time
-workTime = 25 * minute
+newElmodoroModel : Int -> Float -> Maybe Float -> Float -> Float -> List String -> String -> ElmodoroModel
+newElmodoroModel id start end worklen breaklen tags status =
+  { elmodoroID = id
+  , startTime = start
+  , endTime    = end
+  , workLength = worklen
+  , breakLength = breaklen
+  , tags = tags
+  , status = statusStringToElmodoroStatus status
+  }
 
-breakTime : Time
-breakTime = 5 * minute
+decodeElmodoro : String -> Result String ElmodoroModel
+decodeElmodoro json = D.decodeString elmodoroDecoder json
+
+elmodoroDecoder : D.Decoder ElmodoroModel
+elmodoroDecoder =
+  D.object7 newElmodoroModel
+    ("id" := D.int)
+    ("starttime" := D.float)
+    ("endtime" := D.oneOf [ D.null Nothing, D.map Just D.float ])
+    ("worklength" := D.float)
+    ("breaklength" := D.float)
+    ("tags" := D.list D.string)
+    ("status" := D.string)
+
+type alias ElmodoroRequest =
+  { reqWorkLength  : Time
+  , reqBreakLength : Time
+  , reqTags        : List String
+  }
+
+encodeElmodoroRequest : ElmodoroRequest -> String
+encodeElmodoroRequest = E.encode 0 << elmodoroRequestToValue
+
+elmodoroRequestToValue : ElmodoroRequest -> E.Value
+elmodoroRequestToValue elmodoro =
+  E.object [ ("worklength", E.float elmodoro.reqWorkLength)
+           , ("breaklength", E.float elmodoro.reqBreakLength)
+           , ("tags", E.list (L.map E.string elmodoro.reqTags))
+           ]
+
+defaultWorkLength : Time
+defaultWorkLength = 25 * minute
+
+defaultBreakLength : Time
+defaultBreakLength = 5 * minute
 
 view       : Time -> ElmodoroModel -> Html
 view time model =
@@ -35,7 +96,7 @@ view time model =
 
       [ timerView time model
       , tagEntryView model.tags
-      , controlView time model.status
+      , controlView time model
       ]
     ]
 
@@ -58,11 +119,11 @@ displayTimeRemaining time model =
     InProgress ->
       span
         [ class "in-progress-timer" ]
-        [ text (formatTime ((model.startTime + workTime) - time)) ]
+        [ text (formatTime ((model.startTime + model.workLength) - time)) ]
     Break ->
       span
         [ class "break-timer" ]
-        [ text (formatTime ((model.startTime + workTime + breakTime) - time)) ]
+        [ text (formatTime ((model.startTime + model.workLength + model.breakLength) - time)) ]
     Completed ->
       span
         [ class "completed-timer" ]
@@ -70,11 +131,11 @@ displayTimeRemaining time model =
     Aborted    ->
       span
         [ class "aborted-timer" ]
-        [ text (formatTime ((model.startTime + workTime) - model.endTime)) ]
+        [ text (formatTime ((model.startTime + model.workLength) - (M.withDefault time model.endTime))) ]
     Idle ->
       span
         [ class "idle-timer" ]
-        [ text (formatTime workTime) ]
+        [ text (formatTime model.workLength) ]
 
 tagEntryView : List String -> Html
 tagEntryView tags =
@@ -85,54 +146,55 @@ tagEntryView tags =
 
     []
 
-controlView : Time -> ElmodoroStatus -> Html
-controlView time status =
+controlView : Time -> ElmodoroModel -> Html
+controlView time elmodoro =
   div
     [ id "elmodoro-controls" ]
 
-    [ button [ onClick (send updates (startTimer time)) ] [ text "Start" ]
-    , button [ onClick (send updates (endTimer time))  ] [ text "Stop"  ]
+    [ button [ onClick
+      (send requestChan
+        (Http.post "http://localhost:8080/elmodoro"
+          (encodeElmodoroRequest { reqWorkLength = defaultWorkLength
+                                 , reqBreakLength = defaultBreakLength
+                                 , reqTags = []
+                                 })))] [ text "Start" ]
+    , button [ onClick (send requestChan (Http.request "put" (String.append "http://localhost:8080/elmodoro/" (toString elmodoro.elmodoroID)) "" []))  ] [ text "Stop" ]
     ]
 
-startTimer               : Time -> Action
-startTimer time elmodoro =
-  case elmodoro.status of
-    Idle -> { elmodoro | startTime <- time, status <- InProgress }
-    _    -> elmodoro
+requestChan : Channel (Http.Request String)
+requestChan = channel (Http.get "http://localhost:8080")
 
-endTimer               : Time -> Action
-endTimer time elmodoro = 
-  case elmodoro.status of
-    InProgress -> { elmodoro | endTime <- time, status <- Aborted }
-    Break      -> { elmodoro | endTime <- time, status <- Completed }
-    _          -> elmodoro
+handleResponse     : (Http.Response String) -> ElmodoroModel
+handleResponse res =
+  case res of
+    Http.Success json ->
+      case decodeElmodoro json of
+        Ok model -> model
+    _ -> initialModel
 
-updates : Channel Action
-updates = channel identity
+procServerUpdate : Signal (Http.Request String) -> Signal ElmodoroModel
+procServerUpdate req = handleResponse <~ Http.send req
 
-update : Action -> ElmodoroModel -> ElmodoroModel
-update action model = action model
+update : ElmodoroModel -> ElmodoroModel -> ElmodoroModel
+update newmodel oldmodel = newmodel
 
-tick : Time -> Action
-tick time model =
-  if | model.status == Idle || model.status == Aborted || model.status == Completed  -> model
-     | time >= model.startTime + workTime + breakTime                                -> { model | endTime <- time, status <- Completed }
-     | time >= model.startTime + workTime                                            -> { model | endTime <- time, status <- Break }
-     | otherwise                                                                     -> model
+updates : Signal ElmodoroModel
+updates = procServerUpdate (subscribe requestChan)
 
 main : Signal Html
 main = view <~ (every second)
              ~ model
 
 model : Signal ElmodoroModel
-model = foldp update initialModel
-  (merge (subscribe updates)
-         (tick <~ every second))
+model = foldp update initialModel updates
 
 initialModel : ElmodoroModel
 initialModel =
-  { startTime = -1
-  , endTime   = -1
-  , tags      = []
-  , status    = Idle
+  { elmodoroID  = -1
+  , startTime   = -1
+  , endTime     = Just (-1)
+  , workLength  = defaultWorkLength
+  , breakLength = defaultBreakLength
+  , tags        = []
+  , status      = Idle
   }
