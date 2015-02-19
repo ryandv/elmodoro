@@ -9,12 +9,14 @@ type ElmodoroStatus = Idle | InProgress | Break | Completed | Aborted
 
 type alias ElmodoroModel =
   { elmodoroID  : Int
-  , startTime   : Time
-  , endTime     : Maybe Time
-  , workLength  : Time
-  , breakLength : Time
-  , tags        : List String
-  , status      : ElmodoroStatus
+  , workStartTime    : Time
+  , workEndTime      : Maybe Time
+  , breakStartTime   : Maybe Time
+  , breakEndTime     : Maybe Time
+  , workLength       : Time
+  , breakLength      : Time
+  , tags             : List String
+  , status           : ElmodoroStatus
   }
 
 statusStringToElmodoroStatus     : String -> ElmodoroStatus
@@ -26,11 +28,13 @@ statusStringToElmodoroStatus str =
     "completed" -> Completed
     "aborted" -> Aborted
 
-newElmodoroModel : Int -> Float -> Maybe Float -> Float -> Float -> List String -> String -> ElmodoroModel
-newElmodoroModel id start end worklen breaklen tags status =
+newElmodoroModel : Int -> Float -> Maybe Float -> Maybe Float -> Maybe Float -> Float -> Float -> List String -> String -> ElmodoroModel
+newElmodoroModel id workstart workend breakstart breakend worklen breaklen tags status =
   { elmodoroID = id
-  , startTime = start
-  , endTime    = end
+  , workStartTime = workstart
+  , workEndTime    = workend
+  , breakStartTime = breakstart
+  , breakEndTime    = breakend
   , workLength = worklen
   , breakLength = breaklen
   , tags = tags
@@ -42,11 +46,16 @@ decodeElmodoro json = D.decodeString elmodoroDecoder json
 
 elmodoroDecoder : D.Decoder ElmodoroModel
 elmodoroDecoder =
-  D.object7 newElmodoroModel
+  D.andThen (D.object8 newElmodoroModel
     ("id" := D.int)
-    ("starttime" := D.float)
-    ("endtime" := D.oneOf [ D.null Nothing, D.map Just D.float ])
+    ("workstarttime" := D.float)
+    ("workendtime" := D.oneOf [ D.null Nothing, D.map Just D.float ])
+    ("breakstarttime" := D.oneOf [ D.null Nothing, D.map Just D.float ])
+    ("breakendtime" := D.oneOf [ D.null Nothing, D.map Just D.float ])
     ("worklength" := D.float)
     ("breaklength" := D.float)
-    ("tags" := D.list D.string)
-    ("status" := D.string)
+    ("tags" := D.list D.string)) elmodoroDecoder'
+
+elmodoroDecoder' : (String -> ElmodoroModel) -> D.Decoder ElmodoroModel
+elmodoroDecoder' partial = D.object1 partial
+  ("status" := D.string)

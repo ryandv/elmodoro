@@ -30,31 +30,40 @@ instance ToJSON IdentifiedElmodoro where
   toJSON IdentifiedElmodoro
     { elmodoroID  = id
     , elmodoroModel = Elmodoro
-      { workStartTime   = start
-      , workEndTime     = end
+      { workStartTime   = workstart
+      , workEndTime     = workend
+      , breakStartTime   = breakstart
+      , breakEndTime     = breakend
       , workLength  = worklen
       , breakLength = breaklen
       , tags        = tags
       , status      = status
       }
     } = object [ "id"          .= id
-               , "starttime"   .= (floor . (*1000) $ start :: Int)
-               , "endtime"     .= (floor . (*1000) <$> end :: Maybe Int)
-               , "worklength"  .= ((floor worklen) :: Int)
-               , "breaklength" .= ((floor breaklen) :: Int)
+               , "workstarttime"   .= (floor . (*1000) $ workstart :: Int)
+               , "workendtime"     .= (floor . (*1000) <$> workend :: Maybe Int)
+               , "breakstarttime"   .= (floor . (*1000) <$> breakstart :: Maybe Int)
+               , "breakendtime"     .= (floor . (*1000) <$> breakend :: Maybe Int)
+               , "worklength"  .= ((floor worklen :: Int) * 1000)
+               , "breaklength" .= ((floor breaklen :: Int) * 1000)
                , "tags"        .= tags
                , "status"      .= (Prelude.map toLower . show $ status)
                ]
 
 data ElmodoroRequest = ElmodoroRequest
-  { reqWorkLength  :: Int
-  , reqBreakLength :: Int
+  { reqWorkLength  :: Double
+  , reqBreakLength :: Double
   , reqTags        :: [String]
   }
 
+elmodoroRequestInSeconds :: Double -> Double -> [String] -> ElmodoroRequest
+elmodoroRequestInSeconds worklen breaklen tags = ElmodoroRequest (worklen / 1000)
+                                                                 (breaklen / 1000)
+                                                                 (tags)
+
 instance FromJSON ElmodoroRequest where
   parseJSON (Object o) =
-    ElmodoroRequest <$>
+    elmodoroRequestInSeconds <$>
       o .: "worklength"  <*>
       o .: "breaklength" <*>
       o .: "tags"
@@ -78,8 +87,8 @@ createHandler db = do
             , workEndTime        = Nothing
             , breakStartTime     = Nothing
             , breakEndTime       = Nothing
-            , workLength         = fromInteger . toInteger . reqWorkLength $ elmodoro
-            , breakLength        = fromInteger . toInteger . reqBreakLength $ elmodoro
+            , workLength         = fromRational . toRational . reqWorkLength $ elmodoro
+            , breakLength        = fromRational . toRational . reqBreakLength $ elmodoro
             , tags               = reqTags (elmodoro)
             , status             = InProgress
             }

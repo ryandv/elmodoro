@@ -66,9 +66,3 @@ transitionElmodoro curtime elmodoro@Elmodoro { workStartTime   = start
 
   workTimeLeft :: NominalDiffTime
   workTimeLeft = diffUTCTime expectedWorkEndTime (posixSecondsToUTCTime curtime)
-
-  expectedEndTime :: UTCTime
-  expectedEndTime = addUTCTime breaklen expectedWorkEndTime
-
-  timeLeft :: NominalDiffTime
-  timeLeft = diffUTCTime expectedEndTime (posixSecondsToUTCTime curtime)

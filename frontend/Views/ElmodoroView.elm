@@ -51,11 +51,11 @@ displayTimeRemaining time model =
     InProgress ->
       span
         [ class "in-progress-timer" ]
-        [ text (formatTime ((model.startTime + model.workLength) - time)) ]
+        [ text (formatTime ((model.workStartTime + model.workLength) - time)) ]
     Break ->
       span
         [ class "break-timer" ]
-        [ text (formatTime ((model.startTime + model.workLength + model.breakLength) - time)) ]
+        [ text (formatTime ((model.workStartTime + model.workLength + model.breakLength) - time)) ]
     Completed ->
       span
         [ class "completed-timer" ]
@@ -63,7 +63,7 @@ displayTimeRemaining time model =
     Aborted    ->
       span
         [ class "aborted-timer" ]
-        [ text (formatTime ((model.startTime + model.workLength) - (M.withDefault time model.endTime))) ]
+        [ text (formatTime ((model.workStartTime + model.workLength) - (M.withDefault time model.workEndTime))) ]
     Idle ->
       span
         [ class "idle-timer" ]

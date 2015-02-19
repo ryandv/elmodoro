@@ -46,11 +46,13 @@ model = foldp update initialModel updates
 
 initialModel : ElmodoroModel
 initialModel =
-  { elmodoroID  = -1
-  , startTime   = -1
-  , endTime     = Just (-1)
-  , workLength  = defaultWorkLength
-  , breakLength = defaultBreakLength
-  , tags        = []
-  , status      = Idle
+  { elmodoroID      = -1
+  , workStartTime   = -1
+  , workEndTime     = Nothing
+  , breakStartTime  = Nothing
+  , breakEndTime    = Nothing
+  , workLength      = defaultWorkLength
+  , breakLength     = defaultBreakLength
+  , tags            = []
+  , status          = Idle
   }
