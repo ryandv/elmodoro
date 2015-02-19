@@ -5,7 +5,7 @@ import Json.Decode((:=))
 
 import Time(..)
 
-type ElmodoroStatus = Idle | InProgress | Break | Completed | Aborted
+type ElmodoroStatus = Idle | InProgress | Break | BreakPending | Completed | Aborted
 
 type alias ElmodoroModel =
   { elmodoroID  : Int
@@ -27,6 +27,7 @@ statusStringToElmodoroStatus str =
     "break" -> Break
     "completed" -> Completed
     "aborted" -> Aborted
+    "breakpending" -> BreakPending
 
 newElmodoroModel : Int -> Float -> Maybe Float -> Maybe Float -> Maybe Float -> Float -> Float -> List String -> String -> ElmodoroModel
 newElmodoroModel id workstart workend breakstart breakend worklen breaklen tags status =

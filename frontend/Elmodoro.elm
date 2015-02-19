@@ -14,6 +14,8 @@ import Signal(..)
 import String
 import Time(..)
 
+type alias Action = ElmodoroModel -> ElmodoroModel
+
 handleResponse     : (Http.Response String) -> ElmodoroModel
 handleResponse res =
   case res of
@@ -22,13 +24,13 @@ handleResponse res =
         Ok model -> model
     _ -> initialModel
 
-procServerUpdate : Signal (Http.Request String) -> Signal ElmodoroModel
-procServerUpdate req = handleResponse <~ Http.send req
+procServerUpdate : Signal (Http.Request String) -> Signal Action
+procServerUpdate req = always <~ (handleResponse <~ Http.send req)
 
-update : ElmodoroModel -> ElmodoroModel -> ElmodoroModel
-update newmodel oldmodel = newmodel
+update : Action -> ElmodoroModel -> ElmodoroModel
+update action oldmodel = action oldmodel
 
-updates : Signal ElmodoroModel
+updates : Signal Action
 updates = procServerUpdate (subscribe requestChan)
 
 main : Signal Html

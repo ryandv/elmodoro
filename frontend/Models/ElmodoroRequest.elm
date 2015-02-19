@@ -22,10 +22,10 @@ newElmodoroRequest worklen breaklen tags =
   }
 
 defaultWorkLength : Time
-defaultWorkLength = 10 * second
+defaultWorkLength = 3 * second
 
 defaultBreakLength : Time
-defaultBreakLength = 5 * second
+defaultBreakLength = 3 * second
 
 encodeElmodoroRequest : ElmodoroRequest -> String
 encodeElmodoroRequest = E.encode 0 << elmodoroRequestToValue

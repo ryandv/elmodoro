@@ -6,6 +6,6 @@
     color: #00ff00;
 }
 
-.in-progress-timer {
+.break-pending-timer, .in-progress-timer {
     color: #ffa500;
 }
