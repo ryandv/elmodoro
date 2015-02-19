@@ -18,8 +18,8 @@ import String
 
 import Time(..)
 
-view       : Time -> ElmodoroModel -> Html
-view time model =
+view       : Time -> ElmodoroRequest -> ElmodoroModel -> Html
+view time elmreq model =
   div
     [ id "elmodoro-wrapper" ]
 
@@ -27,8 +27,8 @@ view time model =
       [ id "elmodoro-app" ]
 
       [ timerView time model
-      , tagEntryView model.tags
-      , controlView time model
+      , tagEntryView
+      , controlView elmreq model
       ]
     ]
 
@@ -69,29 +69,35 @@ displayTimeRemaining time model =
         [ class "idle-timer" ]
         [ text (formatTime model.workLength) ]
 
-tagEntryView : List String -> Html
-tagEntryView tags =
+tagEntryView : Html
+tagEntryView =
   input
     [ id "elmodoro-tags"
-    , value (String.join "," tags)
+    , on "blur" targetValue (send tagsChan)
     ]
 
     []
 
-controlView : Time -> ElmodoroModel -> Html
-controlView time elmodoro =
+controlView : ElmodoroRequest -> ElmodoroModel -> Html
+controlView elmreq elmodoro =
   div
     [ id "elmodoro-controls" ]
 
     [ button [ onClick
       (send requestChan
         (Http.post "http://localhost:8080/elmodoro"
-          (encodeElmodoroRequest { reqWorkLength = defaultWorkLength
-                                 , reqBreakLength = defaultBreakLength
-                                 , reqTags = []
-                                 })))] [ text "Start" ]
+          (encodeElmodoroRequest elmreq)))] [ text "Start" ]
     , button [ onClick (send requestChan (Http.request "put" (String.append "http://localhost:8080/elmodoro/" (toString elmodoro.elmodoroID)) "" []))  ] [ text "Stop" ]
     ]
 
 requestChan : Channel (Http.Request String)
 requestChan = channel (Http.get "http://localhost:8080")
+
+tagsChan : Channel String
+tagsChan = channel ""
+
+workLengthChan : Channel Time
+workLengthChan = channel defaultWorkLength
+
+breakLengthChan : Channel Time
+breakLengthChan = channel defaultBreakLength

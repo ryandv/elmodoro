@@ -33,7 +33,13 @@ updates = procServerUpdate (subscribe requestChan)
 
 main : Signal Html
 main = view <~ (every second)
+             ~ elmodoroRequest
              ~ model
+
+elmodoroRequest : Signal ElmodoroRequest
+elmodoroRequest = newElmodoroRequest <~ (subscribe workLengthChan)
+                                      ~ (subscribe breakLengthChan)
+                                      ~ (subscribe tagsChan)
 
 model : Signal ElmodoroModel
 model = foldp update initialModel updates

@@ -4,12 +4,21 @@ import List as L
 
 import Json.Encode as E
 
+import String
+
 import Time(..)
 
 type alias ElmodoroRequest =
   { reqWorkLength  : Time
   , reqBreakLength : Time
   , reqTags        : List String
+  }
+
+newElmodoroRequest : Time -> Time -> String -> ElmodoroRequest
+newElmodoroRequest worklen breaklen tags =
+  { reqWorkLength  = worklen
+  , reqBreakLength = breaklen
+  , reqTags        = (String.split "," tags)
   }
 
 defaultWorkLength : Time
