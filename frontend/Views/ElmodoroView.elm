@@ -117,7 +117,7 @@ controlView time elmreq elmodoro =
     ]
 
 requestChan : Channel (Http.Request String)
-requestChan = channel (Http.get "http://localhost:8080")
+requestChan = channel (Http.get "http://localhost:8080/nothing")
 
 tagsChan : Channel String
 tagsChan = channel ""

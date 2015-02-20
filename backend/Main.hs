@@ -123,4 +123,8 @@ main = do
                 createHandler db
            , path $ updateHandler db
            ]
+         , dir "js" $ serveDirectory DisableBrowsing ["index.html"] "static/js"
+         , dir "css" $ serveDirectory DisableBrowsing ["index.html"] "static/css"
+         , do nullDir
+              serveFile (guessContentTypeM mimeTypes) "index.html"
          ]
