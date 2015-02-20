@@ -47,8 +47,8 @@ timerView time model =
 
 formatTime : Time -> String
 formatTime time = String.join ":"
-  [ (toString (floor (inMinutes time)))
-  , (toString ((round (inSeconds time)) % 60))
+  [ String.pad 2 '0' << toString <| floor (inMinutes time)
+  , String.pad 2 '0' << toString <| floor (inSeconds time) % 60
   ]
 
 displayTimeRemaining : Time -> ElmodoroModel -> Html
