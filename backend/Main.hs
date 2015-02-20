@@ -103,6 +103,7 @@ createHandler db = do
 
 updateHandler       :: AcidState ElmodoroDB -> Int -> ServerPart Response
 updateHandler db id = do
+  method PUT
   curtime <- liftIO $ getPOSIXTime
 
   updatedElmodoro <- update' db (UpdateElmodoro id curtime)
