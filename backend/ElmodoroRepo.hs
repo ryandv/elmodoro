@@ -1,6 +1,8 @@
 {-# LANGUAGE DeriveDataTypeable, TemplateHaskell, TypeFamilies #-}
 module ElmodoroRepo where
 
+import Control.Applicative
+import Control.Monad.Reader
 import Control.Monad.State.Lazy
 
 import Data.Acid
@@ -16,6 +18,9 @@ data ElmodoroDB = ElmodoroDB { allElmodoros :: IntMap Elmodoro } deriving(Typeab
 $(deriveSafeCopy 0 'base ''ElmodoroStatus)
 $(deriveSafeCopy 0 'base ''Elmodoro)
 $(deriveSafeCopy 0 'base ''ElmodoroDB)
+
+getAllElmodoros :: Query ElmodoroDB [Elmodoro]
+getAllElmodoros = elems . allElmodoros <$> ask
 
 createElmodoro          :: Elmodoro -> Update ElmodoroDB Key
 createElmodoro elmodoro = do
@@ -39,4 +44,4 @@ updateElmodoro id curtime = do
 
   go (ElmodoroDB db) = ElmodoroDB $ adjust (transitionElmodoro curtime) id db
 
-$(makeAcidic ''ElmodoroDB ['createElmodoro, 'updateElmodoro])
+$(makeAcidic ''ElmodoroDB ['createElmodoro, 'updateElmodoro, 'getAllElmodoros])
