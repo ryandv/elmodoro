@@ -7,6 +7,7 @@ import Control.Monad.State.Lazy
 
 import Data.Acid
 import Data.IntMap.Lazy
+import Data.List
 import Data.SafeCopy
 import Data.Time.Clock.POSIX
 import Data.Typeable
@@ -22,6 +23,9 @@ $(deriveSafeCopy 0 'base ''ElmodoroDB)
 getAllElmodoros :: Query ElmodoroDB [Elmodoro]
 getAllElmodoros = elems . allElmodoros <$> ask
 
+getAllTags :: Query ElmodoroDB [String]
+getAllTags = nub . concatMap tags . elems . allElmodoros <$> ask
+
 createElmodoro          :: Elmodoro -> Update ElmodoroDB Key
 createElmodoro elmodoro = do
   db <- get
@@ -29,7 +33,7 @@ createElmodoro elmodoro = do
   case maxViewWithKey elmodoros of
 
       Just ((maxID, _), _) -> do
-        put . ElmodoroDB $ insert (maxID + 1) elmodoro elmodoros
+        put . ElmodoroDB $ Data.IntMap.Lazy.insert (maxID + 1) elmodoro elmodoros
         return $ maxID + 1
 
       Nothing              -> do
@@ -44,4 +48,4 @@ updateElmodoro id curtime = do
 
   go (ElmodoroDB db) = ElmodoroDB $ adjust (transitionElmodoro curtime) id db
 
-$(makeAcidic ''ElmodoroDB ['createElmodoro, 'updateElmodoro, 'getAllElmodoros])
+$(makeAcidic ''ElmodoroDB ['createElmodoro, 'updateElmodoro, 'getAllElmodoros, 'getAllTags])
