@@ -1,6 +1,6 @@
 import Color
 
-import CommandHandler exposing (..)
+import RequestBuilder exposing (..)
 
 import Models.ElmodoroModel exposing (..)
 import Models.ElmodoroRequest exposing (..)
@@ -34,10 +34,7 @@ model : Signal ElmodoroModel
 model = foldp (<|) initialModel updates.signal
 
 port requestRunner : Signal (Task Http.Error ())
-port requestRunner = Signal.map (\task ->
-  (Task.map always <| parseResponse task) `andThen`
-  (Signal.send updates.address) `onError`
-  (Signal.send requestErrors.address)) <| sendServerUpdate (requestChan.signal)
+port requestRunner = Signal.map processRequest <| sendServerUpdate (requestChan.signal)
 
 port log : Signal String
 port log = Signal.map (\error ->

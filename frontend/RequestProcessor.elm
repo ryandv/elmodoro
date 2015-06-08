@@ -1,6 +1,6 @@
 module RequestProcessor where
 
-import CommandHandler exposing (..)
+import RequestBuilder exposing (..)
 import Models.ElmodoroModel exposing (..)
 
 import Http exposing (..)
@@ -9,8 +9,14 @@ import Task exposing (..)
 
 type alias Action = ElmodoroModel -> ElmodoroModel
 
-parseResponse : (Task Http.RawError Http.Response) -> Task Http.Error ElmodoroModel
-parseResponse task = Http.fromJson elmodoroDecoder task
+processRequest : (Task Http.RawError Http.Response) -> Task Http.Error ()
+processRequest task =
+    parseResponse task            `andThen`
+    (Signal.send updates.address) `onError`
+    (Signal.send requestErrors.address)
+
+parseResponse : (Task Http.RawError Http.Response) -> Task Http.Error Action
+parseResponse task = Task.map always <| Http.fromJson elmodoroDecoder task
 
 sendServerUpdate : Signal Http.Request -> Signal (Task Http.RawError Http.Response)
 sendServerUpdate req = Http.send Http.defaultSettings <~ req

@@ -1,4 +1,4 @@
-module CommandHandler where
+module RequestBuilder where
 
 import Models.ElmodoroModel exposing (..)
 import Models.ElmodoroRequest exposing (..)

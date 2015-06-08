@@ -2,7 +2,7 @@ module Views.ElmodoroView where
 
 import Basics
 
-import CommandHandler exposing (..)
+import RequestBuilder exposing (..)
 
 import Models.ElmodoroModel exposing (..)
 import Models.ElmodoroRequest exposing (..)
