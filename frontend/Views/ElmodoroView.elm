@@ -2,6 +2,8 @@ module Views.ElmodoroView where
 
 import Basics
 
+import CommandHandler exposing (..)
+
 import Models.ElmodoroModel exposing (..)
 import Models.ElmodoroRequest exposing (..)
 
@@ -11,7 +13,7 @@ import Html.Events exposing (..)
 
 import Json.Encode as E
 
-import Http
+import Http exposing (Request)
 
 import Maybe as M
 
@@ -90,24 +92,11 @@ tagEntryView =
       ] []
     ]
 
-updateRequest : ElmodoroModel -> Http.Request
-updateRequest elmodoro =
-  { verb = "PUT"
-  , headers = []
-  , url = (String.append "http://localhost:8081/elmodoro/" (toString elmodoro.elmodoroID))
-  , body = Http.empty
-  }
-
-chooseStartButtonMessage : ElmodoroRequest -> ElmodoroModel -> Http.Request
+chooseStartButtonMessage : ElmodoroRequest -> ElmodoroModel -> Request
 chooseStartButtonMessage elmreq elmodoro =
   if (elmodoro.status == BreakPending)
-     then updateRequest elmodoro
-     else
-       { verb = "POST"
-       , headers = []
-       , url = "http://localhost:8081/elmodoro"
-       , body = Http.string <| encodeElmodoroRequest elmreq
-       }
+     then updateElmodoroStatus elmodoro
+     else startNewElmodoro elmreq
 
 controlView : Time -> ElmodoroRequest -> ElmodoroModel -> Html
 controlView time elmreq elmodoro =
@@ -118,17 +107,9 @@ controlView time elmreq elmodoro =
              , onClick requestChan.address <| chooseStartButtonMessage elmreq elmodoro
              ] [ text "Start" ]
     , button [ class "button-red"
-             , onClick requestChan.address <| updateRequest elmodoro
+             , onClick requestChan.address <| updateElmodoroStatus elmodoro
              ] [ text "Stop" ]
     ]
-
-requestChan : Mailbox Http.Request
-requestChan = mailbox <|
-  { verb = "GET"
-  , headers = []
-  , url = "http://localhost:8081/nothing"
-  , body = Http.empty
-  }
 
 tagsChan : Mailbox String
 tagsChan = mailbox ""

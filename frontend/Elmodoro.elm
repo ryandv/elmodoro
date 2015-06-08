@@ -1,5 +1,7 @@
 import Color
 
+import CommandHandler exposing (..)
+
 import Models.ElmodoroModel exposing (..)
 import Models.ElmodoroRequest exposing (..)
 import Views.ElmodoroView exposing (..)
