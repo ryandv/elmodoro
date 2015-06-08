@@ -7,7 +7,7 @@ import Control.Monad.IO.Class
 import Data.Acid
 import Data.Acid.Advanced
 import Data.Aeson
-import qualified Data.ByteString.Char8 as C
+import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char
 import Data.IntMap.Lazy
 import Data.Maybe
@@ -95,7 +95,7 @@ createHandler db = do
 
           newid <- update' db (CreateElmodoro newelmodoro)
 
-          ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro newid newelmodoro)
+          ok $ toResponse ((C.unpack $ encode $ IdentifiedElmodoro newid newelmodoro) :: String)
 
         _ -> badRequest $ toResponse ("badRequest" :: String)
 
@@ -109,7 +109,7 @@ updateHandler db id = do
   updatedElmodoro <- update' db (UpdateElmodoro id curtime)
 
   case updatedElmodoro of
-    (Just elmodoro) -> ok $ toResponseBS (C.pack "application/json") (encode $ IdentifiedElmodoro id elmodoro)
+    (Just elmodoro) -> ok $ toResponse ((C.unpack $ encode $ IdentifiedElmodoro id elmodoro) :: String)
     Nothing         -> notFound $ toResponse ("Elmodoro not found" :: String)
 
 main :: IO ()

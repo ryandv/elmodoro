@@ -6,7 +6,7 @@ import Json.Encode as E
 
 import String
 
-import Time(..)
+import Time exposing (..)
 
 type alias ElmodoroRequest =
   { reqWorkLength  : Time

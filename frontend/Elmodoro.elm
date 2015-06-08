@@ -1,37 +1,51 @@
 import Color
 
-import Models.ElmodoroModel(..)
-import Models.ElmodoroRequest(..)
-import Views.ElmodoroView(..)
+import Models.ElmodoroModel exposing (..)
+import Models.ElmodoroRequest exposing (..)
+import Views.ElmodoroView exposing (..)
 
-import Html(..)
+import Html exposing (..)
 
 import Http
 
 import Maybe as M
 
-import Signal(..)
+import Signal exposing (..)
 import String
-import Time(..)
+import Time exposing (..)
+
+import Task exposing (..)
 
 type alias Action = ElmodoroModel -> ElmodoroModel
 
-handleResponse     : (Http.Response String) -> ElmodoroModel
-handleResponse res =
-  case res of
-    Http.Success json ->
-      case decodeElmodoro json of
-        Ok model -> model
-    _ -> initialModel
+requestErrors : Mailbox Http.Error
+requestErrors = mailbox <| Http.UnexpectedPayload "init"
 
-procServerUpdate : Signal (Http.Request String) -> Signal Action
-procServerUpdate req = always <~ (handleResponse <~ Http.send req)
+port log : Signal String
+port log = Signal.map (\error ->
+  case error of
+    Http.Timeout -> "Timeout"
+    Http.NetworkError -> "NetworkError"
+    Http.UnexpectedPayload msg -> msg
+    Http.BadResponse code msg -> msg) requestErrors.signal
+
+parseResponse : (Task Http.RawError Http.Response) -> Task Http.Error ElmodoroModel
+parseResponse task = Http.fromJson elmodoroDecoder task
+
+sendServerUpdate : Signal Http.Request -> Signal (Task Http.RawError Http.Response)
+sendServerUpdate req = Http.send Http.defaultSettings <~ req
 
 update : Action -> ElmodoroModel -> ElmodoroModel
 update action oldmodel = action oldmodel
 
-updates : Signal Action
-updates = procServerUpdate (subscribe requestChan)
+port requestRunner : Signal (Task Http.Error ())
+port requestRunner = Signal.map (\task ->
+  (Task.map always <| parseResponse task) `andThen`
+  (Signal.send updates.address) `onError`
+  (Signal.send requestErrors.address)) <| sendServerUpdate (requestChan.signal)
+
+updates : Mailbox Action
+updates = mailbox identity
 
 main : Signal Html
 main = view <~ (every second)
@@ -39,12 +53,12 @@ main = view <~ (every second)
              ~ model
 
 elmodoroRequest : Signal ElmodoroRequest
-elmodoroRequest = newElmodoroRequest <~ (subscribe workLengthChan)
-                                      ~ (subscribe breakLengthChan)
-                                      ~ (subscribe tagsChan)
+elmodoroRequest = newElmodoroRequest <~ (workLengthChan.signal)
+                                      ~ (breakLengthChan.signal)
+                                      ~ (tagsChan.signal)
 
 model : Signal ElmodoroModel
-model = foldp update initialModel updates
+model = foldp update initialModel updates.signal
 
 initialModel : ElmodoroModel
 initialModel =

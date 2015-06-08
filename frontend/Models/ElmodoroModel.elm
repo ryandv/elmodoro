@@ -1,9 +1,9 @@
 module Models.ElmodoroModel where
 
 import Json.Decode as D
-import Json.Decode((:=))
+import Json.Decode exposing ((:=))
 
-import Time(..)
+import Time exposing (..)
 
 type ElmodoroStatus = Idle | InProgress | Break | BreakPending | Completed | Aborted
 

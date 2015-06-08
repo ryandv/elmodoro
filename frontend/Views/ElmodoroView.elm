@@ -2,12 +2,12 @@ module Views.ElmodoroView where
 
 import Basics
 
-import Models.ElmodoroModel(..)
-import Models.ElmodoroRequest(..)
+import Models.ElmodoroModel exposing (..)
+import Models.ElmodoroRequest exposing (..)
 
-import Html(..)
-import Html.Attributes(..)
-import Html.Events(..)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 import Json.Encode as E
 
@@ -15,10 +15,10 @@ import Http
 
 import Maybe as M
 
-import Signal(..)
+import Signal exposing (..)
 import String
 
-import Time(..)
+import Time exposing (..)
 
 view       : Time -> ElmodoroRequest -> ElmodoroModel -> Html
 view time elmreq model =
@@ -86,22 +86,28 @@ tagEntryView =
     [ input
       [ class "tag-field"
       , placeholder "Enter a list of tags for this Elmodoro"
-      , on "blur" targetValue (send tagsChan)
+      , on "blur" targetValue (message tagsChan.address)
       ] []
     ]
 
-updateMessage : ElmodoroModel -> Message
-updateMessage elmodoro = (send requestChan (Http.request "put" (String.append "http://localhost:8080/elmodoro/" (toString elmodoro.elmodoroID)) "" []))
+updateRequest : ElmodoroModel -> Http.Request
+updateRequest elmodoro =
+  { verb = "PUT"
+  , headers = []
+  , url = (String.append "http://localhost:8081/elmodoro/" (toString elmodoro.elmodoroID))
+  , body = Http.empty
+  }
 
-chooseStartButtonMessage : Time -> ElmodoroRequest -> ElmodoroModel -> Message
-chooseStartButtonMessage curtime elmreq elmodoro =
+chooseStartButtonMessage : ElmodoroRequest -> ElmodoroModel -> Http.Request
+chooseStartButtonMessage elmreq elmodoro =
   if (elmodoro.status == BreakPending)
-     then updateMessage elmodoro
-     else (send requestChan
-            (Http.post "http://localhost:8080/elmodoro"
-                       (encodeElmodoroRequest elmreq)
-            )
-          )
+     then updateRequest elmodoro
+     else
+       { verb = "POST"
+       , headers = []
+       , url = "http://localhost:8081/elmodoro"
+       , body = Http.string <| encodeElmodoroRequest elmreq
+       }
 
 controlView : Time -> ElmodoroRequest -> ElmodoroModel -> Html
 controlView time elmreq elmodoro =
@@ -109,21 +115,26 @@ controlView time elmreq elmodoro =
     [ id "elmodoro-controls" ]
 
     [ button [ class "button-green"
-             , onClick <| chooseStartButtonMessage time elmreq elmodoro 
+             , onClick requestChan.address <| chooseStartButtonMessage elmreq elmodoro
              ] [ text "Start" ]
     , button [ class "button-red"
-             , onClick <| updateMessage elmodoro 
+             , onClick requestChan.address <| updateRequest elmodoro
              ] [ text "Stop" ]
     ]
 
-requestChan : Channel (Http.Request String)
-requestChan = channel (Http.get "http://localhost:8080/nothing")
+requestChan : Mailbox Http.Request
+requestChan = mailbox <|
+  { verb = "GET"
+  , headers = []
+  , url = "http://localhost:8081/nothing"
+  , body = Http.empty
+  }
 
-tagsChan : Channel String
-tagsChan = channel ""
+tagsChan : Mailbox String
+tagsChan = mailbox ""
 
-workLengthChan : Channel Time
-workLengthChan = channel defaultWorkLength
+workLengthChan : Mailbox Time
+workLengthChan = mailbox defaultWorkLength
 
-breakLengthChan : Channel Time
-breakLengthChan = channel defaultBreakLength
+breakLengthChan : Mailbox Time
+breakLengthChan = mailbox defaultBreakLength
