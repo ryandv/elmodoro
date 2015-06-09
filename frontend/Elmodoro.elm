@@ -33,6 +33,19 @@ elmodoroRequest = newElmodoroRequest <~ (workLengthChan.signal)
 model : Signal ElmodoroModel
 model = foldp (<|) initialModel updates.signal
 
+tick : Signal (Task Http.Error ())
+tick = Signal.map (\elmodoro ->
+  case elmodoro.status of
+    InProgress -> sleep (elmodoro.workLength) `andThen`
+      (always <| Signal.send requestChan.address <| updateElmodoroStatus elmodoro)
+    Break -> sleep (elmodoro.breakLength) `andThen`
+      (always <| Signal.send requestChan.address <| updateElmodoroStatus elmodoro)
+    _ -> sleep 1)
+  model
+
+port tickRunner : Signal (Task Http.Error ())
+port tickRunner = tick
+
 port requestRunner : Signal (Task Http.Error ())
 port requestRunner = Signal.map processRequest <| sendServerUpdate (requestChan.signal)
 
