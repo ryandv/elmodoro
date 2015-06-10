@@ -1,4 +1,4 @@
-module ElmodoroSpec where
+module Unit.ElmodoroSpec where
 
 import Data.Time.Calendar
 import Data.Time.Clock
