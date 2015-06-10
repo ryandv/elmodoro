@@ -45,3 +45,29 @@ main = hspec $
 
         timerClass'''' <- waitUntil 5 (unexpected "total hack") `onTimeout` attr timerText "class"
         timerClass'''' `shouldBe` Just "completed-timer"
+
+    session "Aborting an elmodoro" $ using Firefox $ do
+
+      it "Aborts an elmodoro" $ runWD $ do
+        openPage "http://localhost:8081"
+
+        workTimeInput <- findElem $ ById "work-time-input"
+        breakTimeInput <- findElem $ ById "break-time-input"
+
+        startButton <- findElem $ ById "start-button"
+        stopButton <- findElem $ ById "stop-button"
+
+        timerText <- findElem $ ById "timer-text"
+        timerClass <- attr timerText "class"
+
+        timerClass `shouldBe` Just "idle-timer"
+
+        click startButton
+
+        timerClass' <- attr timerText "class"
+        timerClass' `shouldBe` Just "in-progress-timer"
+
+        click stopButton
+
+        timerClass'' <- attr timerText "class"
+        timerClass'' `shouldBe` Just "aborted-timer"

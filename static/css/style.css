@@ -17,10 +17,12 @@ button {
 
 .button-green {
     background: rgb(20, 86, 204);
+    font-family: 'Russo One', sans-serif;
 }
 
 .button-red {
     background: rgb(255, 73, 0);
+    font-family: 'Russo One', sans-serif;
 }
 
 #elmodoro-app {
