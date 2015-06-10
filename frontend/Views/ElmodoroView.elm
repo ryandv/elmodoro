@@ -118,6 +118,12 @@ stringToTime s =
           Ok <| mins * minute + secs * second))
     _ -> Err "error parsing time"
 
+parseTimeOrDefault : String -> Time -> Time
+parseTimeOrDefault s defaultTime =
+  case stringToTime s of
+    Ok newTime -> newTime
+    Err _ -> defaultTime
+
 elmodoroOptions : ElmodoroRequest -> ElmodoroModel -> Html
 elmodoroOptions elmreq elmodoro =
   div
@@ -125,15 +131,11 @@ elmodoroOptions elmreq elmodoro =
 
     [ input [ id "work-time-input"
             , on "input" targetValue <| (\inputVal ->
-                case stringToTime inputVal of
-                  Ok newTime -> message workLengthChan.address newTime
-                  Err _ -> message workLengthChan.address defaultWorkLength)
+                message workLengthChan.address <| parseTimeOrDefault inputVal defaultWorkLength)
             ] [ ]
     , input [ id "break-time-input"
             , on "input" targetValue <| (\inputVal ->
-                case stringToTime inputVal of
-                  Ok newTime -> message breakLengthChan.address newTime
-                  Err _ -> message breakLengthChan.address defaultWorkLength)
+                message breakLengthChan.address <| parseTimeOrDefault inputVal defaultBreakLength)
             ] [ ]
     ]
 
