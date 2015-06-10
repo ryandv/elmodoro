@@ -20,6 +20,7 @@ executable elmodoro
                        bytestring >= 0.10.4.0,
                        containers >= 0.5.5.1,
                        happstack-server >= 7.4.0,
+                       hspec-webdriver >= 1.0.2 && < 1.1,
                        hspec >= 2.1.4,
                        mtl >= 2.2.1,
                        safecopy >= 0.8.3,

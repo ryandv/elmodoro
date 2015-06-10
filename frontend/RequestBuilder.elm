@@ -6,6 +6,7 @@ import Models.ElmodoroRequest exposing (..)
 import Http exposing (empty, Request, string)
 import Signal exposing (..)
 import String exposing (append)
+import Time exposing (minute, second, Time)
 
 requestChan : Mailbox Request
 requestChan = mailbox <|

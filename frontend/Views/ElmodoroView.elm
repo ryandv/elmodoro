@@ -17,8 +17,10 @@ import Http exposing (Request)
 
 import Maybe as M
 
+import Result as R
+
 import Signal exposing (..)
-import String
+import String exposing (split)
 
 import Time exposing (..)
 
@@ -35,7 +37,7 @@ view time elmreq model =
           [ id "options" ]
 
           [ tagEntryView
-          , controlView time elmreq model
+          , controlView elmreq model
           ]
       ]
     ]
@@ -58,27 +60,27 @@ displayTimeRemaining time model =
   case model.status of
     InProgress ->
       span
-        [ class "in-progress-timer" ]
+        [ id "timer-text", class "in-progress-timer" ]
         [ text (formatTime (Basics.max 0 <| (model.workStartTime + model.workLength) - time)) ]
     BreakPending ->
       span
-        [ class "break-pending-timer" ]
+        [ id "timer-text", class "break-pending-timer" ]
         [ text (formatTime model.breakLength) ]
     Break ->
       span
-        [ class "break-timer" ]
+        [ id "timer-text", class "break-timer" ]
         [ text (formatTime (Basics.max 0 <| (M.withDefault 0 model.breakStartTime) + model.breakLength - time)) ]
     Completed ->
       span
-        [ class "completed-timer" ]
+        [ id "timer-text", class "completed-timer" ]
         [ text (formatTime 0) ]
     Aborted    ->
       span
-        [ class "aborted-timer" ]
+        [ id "timer-text", class "aborted-timer" ]
         [ text (formatTime ((model.workStartTime + model.workLength) - (M.withDefault time model.workEndTime))) ]
     Idle ->
       span
-        [ class "idle-timer" ]
+        [ id "timer-text", class "idle-timer" ]
         [ text (formatTime model.workLength) ]
 
 tagEntryView : Html
@@ -98,15 +100,54 @@ chooseStartButtonMessage elmreq elmodoro =
      then updateElmodoroStatus elmodoro
      else startNewElmodoro elmreq
 
-controlView : Time -> ElmodoroRequest -> ElmodoroModel -> Html
-controlView time elmreq elmodoro =
+controlView : ElmodoroRequest -> ElmodoroModel -> Html
+controlView elmreq elmodoro =
   div
     [ id "elmodoro-controls" ]
 
-    [ button [ class "button-green"
+    [ controlButtons elmreq elmodoro
+    , elmodoroOptions elmreq elmodoro
+    ]
+
+stringToTime : String -> Result String Time
+stringToTime s =
+  case split ":" s of
+    [ minsString, secsString ] ->
+      String.toFloat minsString `R.andThen` (\mins ->
+        String.toFloat secsString `R.andThen` (\secs ->
+          Ok <| mins * minute + secs * second))
+    _ -> Err "error parsing time"
+
+elmodoroOptions : ElmodoroRequest -> ElmodoroModel -> Html
+elmodoroOptions elmreq elmodoro =
+  div
+    [ id "elmodoro-options" ]
+
+    [ input [ id "work-time-input"
+            , on "input" targetValue <| (\inputVal ->
+                case stringToTime inputVal of
+                  Ok newTime -> message workLengthChan.address newTime
+                  Err _ -> message workLengthChan.address defaultWorkLength)
+            ] [ ]
+    , input [ id "break-time-input"
+            , on "input" targetValue <| (\inputVal ->
+                case stringToTime inputVal of
+                  Ok newTime -> message breakLengthChan.address newTime
+                  Err _ -> message breakLengthChan.address defaultWorkLength)
+            ] [ ]
+    ]
+
+controlButtons : ElmodoroRequest -> ElmodoroModel -> Html
+controlButtons elmreq elmodoro =
+  div
+    [ id "elmodoro-buttons" ]
+
+    [ button [ id "start-button"
+             , class "button-green"
              , onClick requestChan.address <| chooseStartButtonMessage elmreq elmodoro
              ] [ text "Start" ]
-    , button [ class "button-red"
+    , button [ id "stop-button"
+             , class "button-red"
              , onClick requestChan.address <| updateElmodoroStatus elmodoro
              ] [ text "Stop" ]
     ]
