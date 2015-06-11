@@ -36,7 +36,7 @@ view time elmreq model =
       , div
           [ id "options" ]
 
-          [ tagEntryView
+          [ tagEntryView model
           , controlView elmreq model
           ]
       ]
@@ -83,12 +83,13 @@ displayTimeRemaining time model =
         [ id "timer-text", class "idle-timer" ]
         [ text (formatTime model.workLength) ]
 
-tagEntryView : Html
-tagEntryView =
+tagEntryView : ElmodoroModel -> Html
+tagEntryView model =
   div
     [ id "elmodoro-tags" ]
     [ input
       [ class "tag-field"
+      , disabled (model.status /= Idle && model.status /= Aborted)
       , placeholder "Enter a list of tags for this Elmodoro"
       , on "blur" targetValue (message tagsChan.address)
       ] []

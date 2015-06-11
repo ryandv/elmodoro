@@ -36,14 +36,14 @@ main = hspec $
         timerClass' <- attr timerText "class"
         timerClass' `shouldBe` Just "in-progress-timer"
 
-        timerClass'' <- waitUntil 3 (unexpected "total hack") `onTimeout` attr timerText "class"
+        timerClass'' <- waitUntil 4 (unexpected "total hack") `onTimeout` attr timerText "class"
         timerClass'' `shouldBe` Just "break-pending-timer"
 
         click startButton
         timerClass''' <- attr timerText "class"
         timerClass''' `shouldBe` Just "break-timer"
 
-        timerClass'''' <- waitUntil 5 (unexpected "total hack") `onTimeout` attr timerText "class"
+        timerClass'''' <- waitUntil 6 (unexpected "total hack") `onTimeout` attr timerText "class"
         timerClass'''' `shouldBe` Just "completed-timer"
 
     session "Aborting an elmodoro" $ using Firefox $ do
@@ -71,3 +71,22 @@ main = hspec $
 
         timerClass'' <- attr timerText "class"
         timerClass'' `shouldBe` Just "aborted-timer"
+
+    session "Tag entry" $ using Firefox $ do
+
+      it "Does not allow me to edit tags when an Elmodoro is in progress" $ runWD $ do
+        openPage "http://localhost:8081"
+
+        tagsEntry <- findElem $ ByClass "tag-field"
+
+        isDisabled <- not <$> isEnabled tagsEntry
+        isDisabled `shouldBe` False
+
+        startButton <- findElem $ ById "start-button"
+
+        sendKeys "foo,bar,baz" tagsEntry
+
+        click startButton
+
+        isDisabled' <- not <$> isEnabled tagsEntry
+        isDisabled' `shouldBe` True
