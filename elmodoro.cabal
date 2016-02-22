@@ -14,7 +14,7 @@ cabal-version:       >=1.10
 executable elmodoro
   main-is:             Main.hs
   hs-source-dirs:      backend
-  build-depends:       base >=4.7 && <4.8,
+  build-depends:       base >=4.8 && <4.9,
                        acid-state >= 0.12.3,
                        aeson >= 0.8.0.2,
                        bytestring >= 0.10.4.0,
