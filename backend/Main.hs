@@ -1,20 +1,25 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 import Control.Applicative
 import Control.Monad
+import Control.Monad.Logger
 import Control.Monad.Trans.Class
+import Control.Monad.Trans.Control
 import Control.Monad.IO.Class
 
-import Data.Acid
-import Data.Acid.Advanced
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Char
-import Data.IntMap.Lazy
+import Data.Int
+import qualified Data.IntMap.Lazy as IM
 import Data.Maybe
 import Data.Time.Clock
 import Data.Time.Clock.POSIX
 
+import Database.Persist.Postgresql
+
 import Elmodoro
+import ElmodoroType
 import ElmodoroRepo
 
 import Happstack.Server
@@ -22,7 +27,7 @@ import Happstack.Server
 import System.Environment
 
 data IdentifiedElmodoro = IdentifiedElmodoro
-  { elmodoroID    :: Int
+  { elmodoroID    :: Int64
   , elmodoroModel :: Elmodoro
   }
 
@@ -30,22 +35,22 @@ instance ToJSON IdentifiedElmodoro where
   toJSON IdentifiedElmodoro
     { elmodoroID  = id
     , elmodoroModel = Elmodoro
-      { workStartTime   = workstart
-      , workEndTime     = workend
-      , breakStartTime   = breakstart
-      , breakEndTime     = breakend
-      , workLength  = worklen
-      , breakLength = breaklen
-      , tags        = tags
-      , status      = status
+      { elmodoroWorkStartTime   = workstart
+      , elmodoroWorkEndTime     = workend
+      , elmodoroBreakStartTime   = breakstart
+      , elmodoroBreakEndTime     = breakend
+      , elmodoroWorkLength  = worklen
+      , elmodoroBreakLength = breaklen
+      , elmodoroTags        = tags
+      , elmodoroStatus      = status
       }
     } = object [ "id"          .= id
-               , "workstarttime"   .= (floor . (*1000) $ workstart :: Int)
-               , "workendtime"     .= (floor . (*1000) <$> workend :: Maybe Int)
-               , "breakstarttime"   .= (floor . (*1000) <$> breakstart :: Maybe Int)
-               , "breakendtime"     .= (floor . (*1000) <$> breakend :: Maybe Int)
-               , "worklength"  .= ((floor worklen :: Int) * 1000)
-               , "breaklength" .= ((floor breaklen :: Int) * 1000)
+               , "workstarttime"   .= (floor . (*1000) . utcTimeToPOSIXSeconds $ workstart :: Int)
+               , "workendtime"     .= (floor . (*1000) . utcTimeToPOSIXSeconds <$> workend :: Maybe Int)
+               , "breakstarttime"   .= (floor . (*1000) . utcTimeToPOSIXSeconds <$> breakstart :: Maybe Int)
+               , "breakendtime"     .= (floor . (*1000) . utcTimeToPOSIXSeconds <$> breakend :: Maybe Int)
+               , "worklength"  .= ((fromInteger $ toInteger worklen :: Int) * 1000)
+               , "breaklength" .= ((fromInteger $ toInteger breaklen :: Int) * 1000)
                , "tags"        .= tags
                , "status"      .= (Prelude.map toLower . show $ status)
                ]
@@ -68,8 +73,15 @@ instance FromJSON ElmodoroRequest where
       o .: "breaklength" <*>
       o .: "tags"
 
-createHandler    :: AcidState ElmodoroDB -> ServerPart Response
-createHandler db = do
+connstr :: ConnectionString
+connstr = "host=localhost port=5432 dbname=elmodoro_dev"
+
+createElmodoroQuery newElmodoro = do
+  newId <- insert newElmodoro
+  return $ fromSqlKey newId
+
+createHandler :: ConnectionPool -> ServerPart Response
+createHandler pool = do
   req <- askRq
   rqbody <- takeRequestBody req
 
@@ -83,17 +95,18 @@ createHandler db = do
 
           curtime <- liftIO $ getPOSIXTime
 
-          let newelmodoro = Elmodoro { workStartTime = curtime
-            , workEndTime        = Nothing
-            , breakStartTime     = Nothing
-            , breakEndTime       = Nothing
-            , workLength         = fromRational . toRational . reqWorkLength $ elmodoro
-            , breakLength        = fromRational . toRational . reqBreakLength $ elmodoro
-            , tags               = reqTags (elmodoro)
-            , status             = InProgress
+          let newelmodoro = Elmodoro {
+              elmodoroWorkStartTime      = posixSecondsToUTCTime curtime
+            , elmodoroWorkEndTime        = Nothing
+            , elmodoroBreakStartTime     = Nothing
+            , elmodoroBreakEndTime       = Nothing
+            , elmodoroWorkLength         = round . reqWorkLength $ elmodoro
+            , elmodoroBreakLength        = round . reqBreakLength $ elmodoro
+            , elmodoroTags               = reqTags (elmodoro)
+            , elmodoroStatus             = InProgress
             }
 
-          newid <- update' db (CreateElmodoro newelmodoro)
+          newid <- flip runSqlPool pool $ createElmodoroQuery newelmodoro
 
           ok $ toResponse ((C.unpack $ encode $ IdentifiedElmodoro newid newelmodoro) :: String)
 
@@ -101,12 +114,21 @@ createHandler db = do
 
     else internalServerError $ toResponse ("500" :: String)
 
-updateHandler       :: AcidState ElmodoroDB -> Int -> ServerPart Response
-updateHandler db id = do
+updateElmodoroQuery curtime id = do
+  maybeElmodoro <- get id
+  case maybeElmodoro of
+    Nothing       -> return Nothing
+    Just elmodoro -> do
+      let updatedElmodoro = transitionElmodoro curtime elmodoro
+      replace id updatedElmodoro
+      return $ Just updatedElmodoro
+
+updateHandler       :: ConnectionPool -> Int64 -> ServerPart Response
+updateHandler pool id = do
   method PUT
   curtime <- liftIO $ getPOSIXTime
 
-  updatedElmodoro <- update' db (UpdateElmodoro id curtime)
+  updatedElmodoro <- flip runSqlPool pool . updateElmodoroQuery curtime $ toSqlKey id
 
   case updatedElmodoro of
     (Just elmodoro) -> ok $ toResponse ((C.unpack $ encode $ IdentifiedElmodoro id elmodoro) :: String)
@@ -114,18 +136,19 @@ updateHandler db id = do
 
 main :: IO ()
 main = do
-  db <- openLocalState (ElmodoroDB Data.IntMap.Lazy.empty)
-
   envPort <- getEnv "PORT"
-  simpleHTTP (nullConf { port = read envPort }) $
-    msum [ dir "elmodoro" $
-      msum [ do nullDir
-                method POST
-                createHandler db
-           , path $ updateHandler db
+  runStderrLoggingT $ withPostgresqlPool connstr 4 $ \pool -> liftIO $ do
+    flip runSqlPool pool $ do runMigration migrateAll
+  --runSqlite ":memory:" $ runMigration migrateAll
+    simpleHTTP (nullConf { port = read envPort }) $
+      msum [ dir "elmodoro" $
+        msum [ do nullDir
+                  method POST
+                  createHandler pool
+             , path $ updateHandler pool
+             ]
+           , dir "js" $ serveDirectory DisableBrowsing ["index.html"] "static/js"
+           , dir "css" $ serveDirectory DisableBrowsing ["index.html"] "static/css"
+           , do nullDir
+                serveFile (guessContentTypeM mimeTypes) "index.html"
            ]
-         , dir "js" $ serveDirectory DisableBrowsing ["index.html"] "static/js"
-         , dir "css" $ serveDirectory DisableBrowsing ["index.html"] "static/css"
-         , do nullDir
-              serveFile (guessContentTypeM mimeTypes) "index.html"
-         ]

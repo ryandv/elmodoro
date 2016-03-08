@@ -15,15 +15,19 @@ executable elmodoro
   main-is:             Main.hs
   hs-source-dirs:      backend
   build-depends:       base >=4.8 && <4.9,
-                       acid-state >= 0.12.3,
                        aeson >= 0.8.0.2,
                        bytestring >= 0.10.4.0,
                        containers >= 0.5.5.1,
                        happstack-server >= 7.4.0,
                        hspec-webdriver >= 1.0.2 && < 1.1,
                        hspec >= 2.1.4,
+                       monad-control >= 1.0.0.4 && < 1.1,
+                       monad-logger >= 0.3.16 && < 0.4,
                        mtl >= 2.2.1,
-                       safecopy >= 0.8.3,
+                       persistent >= 2.2.4 && < 2.3.0,
+                       persistent-template >= 2.1.4 && < 2.2.0,
+                       persistent-sqlite >= 2.2 && < 2.3,
+                       persistent-postgresql >= 2.2.1.2 && < 2.3,
                        time >= 1.4.2,
                        transformers >= 0.4.2.0,
                        webdriver >= 0.6.1 && < 0.7

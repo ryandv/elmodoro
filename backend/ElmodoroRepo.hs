@@ -5,20 +5,14 @@ import Control.Applicative
 import Control.Monad.Reader
 import Control.Monad.State.Lazy
 
-import Data.Acid
 import Data.IntMap.Lazy
 import Data.List
-import Data.SafeCopy
 import Data.Time.Clock.POSIX
 import Data.Typeable
 
 import Elmodoro
 
-data ElmodoroDB = ElmodoroDB { allElmodoros :: IntMap Elmodoro } deriving(Typeable)
-
-$(deriveSafeCopy 0 'base ''ElmodoroStatus)
-$(deriveSafeCopy 0 'base ''Elmodoro)
-$(deriveSafeCopy 0 'base ''ElmodoroDB)
+{--
 
 getAllElmodoros :: Query ElmodoroDB [Elmodoro]
 getAllElmodoros = elems . allElmodoros <$> ask
@@ -49,3 +43,4 @@ updateElmodoro id curtime = do
   go (ElmodoroDB db) = ElmodoroDB $ adjust (transitionElmodoro curtime) id db
 
 $(makeAcidic ''ElmodoroDB ['createElmodoro, 'updateElmodoro, 'getAllElmodoros, 'getAllTags])
+--}

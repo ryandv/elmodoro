@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveDataTypeable #-}
+
 module Elmodoro
   ( Elmodoro(..)
   , ElmodoroStatus(..)
@@ -6,52 +7,41 @@ module Elmodoro
   , transitionElmodoro
   ) where
 
+import ElmodoroType
+import ElmodoroStatusType
+
 import Data.Time.Clock
 import Data.Time.Clock.POSIX
-import Data.Typeable
-
-data ElmodoroStatus = Idle | InProgress | Break | BreakPending | Completed | Aborted deriving(Eq, Show)
-
-data Elmodoro = Elmodoro
-  { workStartTime    :: POSIXTime
-  , workEndTime      :: Maybe POSIXTime
-  , breakStartTime   :: Maybe POSIXTime
-  , breakEndTime     :: Maybe POSIXTime
-  , workLength       :: NominalDiffTime
-  , breakLength      :: NominalDiffTime
-  , tags             :: [String]
-  , status           :: ElmodoroStatus
-  } deriving(Eq, Show, Typeable)
 
 abortElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 abortElmodoro curtime elmodoro =
-  elmodoro { workEndTime = Just $ curtime
-           , status = Aborted
+  elmodoro { elmodoroWorkEndTime = Just $ posixSecondsToUTCTime curtime
+           , elmodoroStatus = Aborted
            }
 
 waitForBreak :: POSIXTime -> Elmodoro -> Elmodoro
 waitForBreak curtime elmodoro =
-  elmodoro { status      = BreakPending
-           , workEndTime = Just curtime
+  elmodoro { elmodoroStatus      = BreakPending
+           , elmodoroWorkEndTime = Just $ posixSecondsToUTCTime curtime
            }
 
 startBreak :: POSIXTime -> Elmodoro -> Elmodoro
 startBreak curtime elmodoro =
-  elmodoro { status         = Break
-           , breakStartTime = Just curtime
+  elmodoro { elmodoroStatus         = Break
+           , elmodoroBreakStartTime = Just $ posixSecondsToUTCTime curtime
            }
 
 completeElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
 completeElmodoro curtime elmodoro =
-  elmodoro { status       = Completed
-           , breakEndTime = Just $ curtime
+  elmodoro { elmodoroStatus       = Completed
+           , elmodoroBreakEndTime = Just $ posixSecondsToUTCTime curtime
            }
 
 transitionElmodoro :: POSIXTime -> Elmodoro -> Elmodoro
-transitionElmodoro curtime elmodoro@Elmodoro { workStartTime   = start
-                                             , workLength      = worklen
-                                             , breakLength     = breaklen
-                                             , status          = status
+transitionElmodoro curtime elmodoro@Elmodoro { elmodoroWorkStartTime   = start
+                                             , elmodoroWorkLength      = worklen
+                                             , elmodoroBreakLength     = breaklen
+                                             , elmodoroStatus          = status
                                              }
 
   | status == Aborted                    = elmodoro
@@ -62,7 +52,7 @@ transitionElmodoro curtime elmodoro@Elmodoro { workStartTime   = start
   | otherwise = elmodoro where
 
   expectedWorkEndTime :: UTCTime
-  expectedWorkEndTime = addUTCTime worklen (posixSecondsToUTCTime start)
+  expectedWorkEndTime = addUTCTime (fromInteger $ toInteger worklen) start
 
   workTimeLeft :: NominalDiffTime
   workTimeLeft = diffUTCTime expectedWorkEndTime (posixSecondsToUTCTime curtime)
